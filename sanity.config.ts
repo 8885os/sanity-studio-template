@@ -2,7 +2,7 @@ import {defineConfig} from 'sanity'
 import {structureTool} from 'sanity/structure'
 import {visionTool} from '@sanity/vision'
 import {schemaTypes} from './schemaTypes'
-import {vercelDeployTool} from 'sanity-plugin-vercel-deploy'
+import CustomDeployTool from './components/DeployTool'
 
 export default defineConfig({
   name: 'default',
@@ -11,9 +11,17 @@ export default defineConfig({
   projectId: `${process.env.SANITY_STUDIO_PROJECT_ID}`,
   dataset: `${process.env.SANITY_STUDIO_DATASET}`,
 
-  plugins: [structureTool(), visionTool(), vercelDeployTool()],
+  plugins: [structureTool({title: 'CMS'}), visionTool({title: 'Developer Tab'})],
 
   schema: {
     types: schemaTypes,
   },
+  tools: (prev) => [
+    ...prev,
+    {
+      name: 'deploy',
+      title: 'Deploy',
+      component: CustomDeployTool,
+    },
+  ],
 })
