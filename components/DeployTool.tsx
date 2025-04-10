@@ -54,9 +54,7 @@ export default function CustomDeployTool() {
         const buildStatus = latestDeployment?.readyState || 'Unknown'
         setStatus(buildStatus)
       } catch (err) {
-        setError(
-          'Error fetching deployments. Please check your Vercel token and network connection.',
-        )
+        setError('Error fetching deployments.')
         console.error('Deployment fetch error:', err)
       }
     }
