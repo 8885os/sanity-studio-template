@@ -1,6 +1,6 @@
 import {defineField, defineType} from 'sanity'
 
-export const postType = defineType({
+export const postdupeType = defineType({
   name: 'test',
   title: 'test',
   type: 'document',

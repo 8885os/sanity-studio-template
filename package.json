@@ -15,7 +15,9 @@
     "sanity"
   ],
   "dependencies": {
+    "@sanity/presentation": "^2.0.0",
     "@sanity/vision": "^3.82.0",
+    "@sanity/visual-editing": "^2.13.15",
     "axios": "^1.8.4",
     "dotenv": "^16.4.7",
     "react": "^18.2.0",
