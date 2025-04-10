@@ -2,7 +2,6 @@ import React, {useEffect, useState} from 'react'
 import axios, {AxiosRequestConfig} from 'axios'
 
 const VERCEL_API_URL = 'https://api.vercel.com/v9/projects/'
-const previewURL = 'https://wdc-test-g3s0jog8w-8885os-projects.vercel.app/'
 const productionURL = 'https://wdc-test-gamma.vercel.app/'
 const PROJECT_ID = 'prj_Z1v7HI0owi0iMGrUjdHgTiSen5He'
 const TOKEN = process.env.SANITY_STUDIO_VERCEL_TOKEN
@@ -11,6 +10,7 @@ interface Deployment {
   id: string
   status: string
   createdAt: string
+  url: string
 }
 
 export default function CustomDeployTool() {
@@ -99,9 +99,9 @@ export default function CustomDeployTool() {
                 {status}
               </span>{' '}
               <a
-                href={previewURL}
+                href={deployment ? 'https://' + deployment.url : productionURL}
                 target="_blank"
-                rel="noopener noreferrer"
+                rel="noreferrer"
                 style={{color: '#0066cc'}}
               >
                 Preview URL
@@ -116,7 +116,7 @@ export default function CustomDeployTool() {
 
         <div style={{marginBottom: '2rem', fontSize: '0.9rem', color: '#666'}}>
           After updating the CMS in the structure tab, use Preview to verify changes, then deploy to
-          Production to go live.
+          Production to go live - not added yet.
         </div>
 
         <div>
@@ -125,7 +125,7 @@ export default function CustomDeployTool() {
             <li style={{margin: '0.5rem 0'}}>
               🔍{' '}
               <a
-                href={previewURL}
+                href={deployment ? 'https://' + deployment.url : productionURL}
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{color: '#0066cc'}}
