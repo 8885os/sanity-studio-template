@@ -28,7 +28,7 @@ export default defineConfig({
         },
       },
       previewUrl: {
-        origin: 'http://localhost:3000/',
+        origin: 'https://wdc-test-gamma.vercel.app/',
         preview: '/',
         previewMode: {
           enable: '/api/draft-mode/enable',
