@@ -4,6 +4,7 @@ import {visionTool} from '@sanity/vision'
 import {schemaTypes} from './schemaTypes'
 import CustomDeployTool from './components/DeployTool'
 import {defineLocations, presentationTool} from 'sanity/presentation'
+import {StagingAction} from './actions'
 
 export default defineConfig({
   name: 'default',
@@ -27,7 +28,7 @@ export default defineConfig({
         },
       },
       previewUrl: {
-        origin: 'http://localhost:3000/',
+        origin: 'https://wdc-test-gamma.vercel.app/',
         preview: '/',
         previewMode: {
           enable: '/api/draft-mode/enable',
@@ -36,6 +37,9 @@ export default defineConfig({
       },
     }),
   ],
+  document: {
+    actions: [StagingAction],
+  },
 
   schema: {
     types: schemaTypes,
