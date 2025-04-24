@@ -5,6 +5,7 @@ const VERCEL_API_URL = 'https://api.vercel.com/v9/projects/'
 const productionURL = 'https://wdc-test-gamma.vercel.app/'
 const PROJECT_ID = 'prj_Z1v7HI0owi0iMGrUjdHgTiSen5He'
 const TOKEN = process.env.SANITY_STUDIO_VERCEL_TOKEN
+const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_VERCEL_WEBHOOK
 
 interface Deployment {
   id: string
@@ -17,6 +18,22 @@ export default function CustomDeployTool() {
   const [status, setStatus] = useState<string>('Loading...')
   const [error, setError] = useState<string | null>(null)
   const [deployment, setDeployment] = useState<Deployment | null>(null)
+  const [confirming, setConfirming] = useState(false)
+  const [, setConfirmed] = useState(false) // To track if user confirmed
+
+  const handleDeploy = async () => {
+    try {
+      await axios.post(`${PRODUCTION_WEBHOOK}`)
+      setConfirmed(true)
+      alert('Production deploy triggered!')
+      // eslint-disable-next-line typescript/no-unused-vars
+    } catch (err) {
+      setConfirmed(false)
+      alert('Failed to trigger production deploy.')
+    }
+    setConfirming(false)
+  }
+
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'ready':
@@ -115,8 +132,30 @@ export default function CustomDeployTool() {
         )}
 
         <div style={{marginBottom: '2rem', fontSize: '0.9rem', color: '#666'}}>
-          After updating the CMS in the structure tab, use Preview to verify changes, then deploy to
-          Production to go live - not added yet.
+          <p>
+            After checking the preview link, click &lsquo;Publish live&rsquo; to make your changes
+            live:
+          </p>
+          <button
+            onClick={() => {
+              if (!confirming) {
+                setConfirming(true)
+              } else {
+                handleDeploy()
+              }
+            }}
+            style={{
+              padding: '10px 16px',
+              fontSize: '0.9rem',
+              backgroundColor: 'transparent',
+              color: '#32a852',
+              border: 'solid 1px white',
+              borderRadius: '6px',
+              cursor: 'pointer',
+            }}
+          >
+            {confirming ? 'Click again to confirm' : 'Publish live'}
+          </button>
         </div>
 
         <div>
