@@ -156,6 +156,7 @@ export default function CustomDeployTool() {
           >
             {confirming ? 'Click again to confirm' : 'Publish live'}
           </button>
+          <p>Status to be added</p>
         </div>
 
         <div>
