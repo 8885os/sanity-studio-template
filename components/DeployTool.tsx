@@ -147,11 +147,7 @@ export default function CustomDeployTool() {
             >
               {stagingStatus}
             </span>{' '}
-            <a
-              href={deployments.staging ? 'https://' + deployments.staging.url : stagingURL}
-              target="_blank"
-              rel="noreferrer"
-            >
+            <a href={stagingURL} target="_blank" rel="noreferrer">
               Preview URL
             </a>
           </p>
