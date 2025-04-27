@@ -76,6 +76,7 @@ export default function CustomDeployTool() {
       }
     } catch (error) {
       console.error('Error revalidating:', error)
+      setUpdating(false)
       alert('Failed to Update.')
     }
   }
