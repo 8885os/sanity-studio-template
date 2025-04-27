@@ -1,37 +1,82 @@
 import React, {useEffect, useState} from 'react'
 import axios, {AxiosRequestConfig} from 'axios'
+import './deploytool.css'
 
-const VERCEL_API_URL = 'https://api.vercel.com/v9/projects/'
+const VERCEL_API_URL = 'https://api.vercel.com/v6/deployments'
 const productionURL = 'https://wdc-test-gamma.vercel.app/'
+const stagingURL = 'https://wdc-test-git-staging-8885os-projects.vercel.app/'
 const PROJECT_ID = 'prj_Z1v7HI0owi0iMGrUjdHgTiSen5He'
 const TOKEN = process.env.SANITY_STUDIO_VERCEL_TOKEN
 const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_VERCEL_WEBHOOK
 
 interface Deployment {
   id: string
-  status: string
   createdAt: string
   url: string
+  target: string
+  readyState: string
 }
 
 export default function CustomDeployTool() {
-  const [status, setStatus] = useState<string>('Loading...')
+  const [stagingStatus, setStagingStatus] = useState<string>('Loading...')
+  const [productionStatus, setproductionStatus] = useState<string>('Loading...')
   const [error, setError] = useState<string | null>(null)
-  const [deployment, setDeployment] = useState<Deployment | null>(null)
+  const [deploying, setDeploying] = useState(false)
+  const [deployments, setDeployments] = useState<{
+    staging: Deployment | null
+    production: Deployment | null
+  }>({staging: null, production: null})
   const [confirming, setConfirming] = useState(false)
-  const [, setConfirmed] = useState(false) // To track if user confirmed
 
+  const fetchDeployments = async () => {
+    try {
+      const config: AxiosRequestConfig = {
+        headers: {
+          Authorization: `Bearer ${TOKEN}`,
+        },
+      }
+
+      const response = await axios.get(`${VERCEL_API_URL}?projectId=${PROJECT_ID}&limit=10`, config)
+
+      const deploymentsData = response.data.deployments
+
+      const latestDeployment = deploymentsData.find(
+        (deployment: Deployment) => deployment.target === 'production',
+      )
+
+      const stagingDeployment = deploymentsData.find(
+        (deployment: Deployment) => deployment.target !== 'production',
+      )
+
+      setDeployments({staging: stagingDeployment, production: latestDeployment})
+    } catch (err) {
+      setError('Error fetching deployments.')
+      console.error('Deployment fetch error:', err)
+    }
+  }
+
+  // Trigger deployment on button click
   const handleDeploy = async () => {
     try {
+      setDeploying(true)
       await axios.post(`${PRODUCTION_WEBHOOK}`)
-      setConfirmed(true)
-      alert('Production deploy triggered!')
-      // eslint-disable-next-line typescript/no-unused-vars
+      setConfirming(false)
+
+      let retries = 10
+      while (retries > 0) {
+        await new Promise((resolve) => setTimeout(resolve, 10000))
+        await fetchDeployments()
+
+        if (deployments.production?.readyState === 'READY') {
+          break
+        }
+        retries--
+      }
+      setDeploying(false)
     } catch (err) {
-      setConfirmed(false)
-      alert('Failed to trigger production deploy.')
+      setError('Failed to trigger production deploy.')
+      console.error('Deploy Error:', err)
     }
-    setConfirming(false)
   }
 
   const getStatusColor = (status: string) => {
@@ -39,47 +84,33 @@ export default function CustomDeployTool() {
       case 'ready':
         return 'green'
       case 'queued':
-        return 'yellow'
       case 'initializing':
         return 'yellow'
       case 'building':
         return 'orange'
       case 'canceled':
-        return 'red'
       case 'error':
         return 'red'
       default:
         return 'gray'
     }
   }
+
+  // Fetch deployments when component mounts
   useEffect(() => {
-    const fetchBuildStatus = async () => {
-      try {
-        // Define the config object with proper typing
-        const config: AxiosRequestConfig = {
-          headers: {
-            Authorization: `Bearer ${TOKEN}`,
-          },
-        }
+    fetchDeployments()
+    setStagingStatus(deployments.staging?.readyState || 'Unknown')
+    setproductionStatus(deployments.production?.readyState || 'Loading...')
+    // Set an interval to refresh deployments every 30 seconds
+    const interval = setInterval(fetchDeployments, 30000)
 
-        const response = await axios.get(`${VERCEL_API_URL}${PROJECT_ID}`, config)
+    return () => clearInterval(interval) // Clear interval on unmount
+  }, [deployments.production?.readyState, deployments.staging?.readyState])
 
-        const deploymentsData = response.data.latestDeployments || []
-        setDeployment(deploymentsData[0])
-
-        const latestDeployment = deploymentsData[0]
-        const buildStatus = latestDeployment?.readyState || 'Unknown'
-        setStatus(buildStatus)
-      } catch (err) {
-        setError('Error fetching deployments.')
-        console.error('Deployment fetch error:', err)
-      }
-    }
-
-    fetchBuildStatus()
-    const interval = setInterval(fetchBuildStatus, 30000)
-    return () => clearInterval(interval)
-  }, [])
+  useEffect(() => {
+    setStagingStatus(deployments.staging?.readyState || 'Unknown')
+    setproductionStatus(deployments.production?.readyState || 'Loading...')
+  }, [deployments]) // Re-run when deployments state changes
 
   return (
     <div style={{display: 'flex', justifyContent: 'center'}}>
@@ -96,45 +127,39 @@ export default function CustomDeployTool() {
       >
         <h3 style={{marginBottom: '1rem'}}>Vercel Deployments</h3>
 
-        {error ? (
+        {error && (
           <div style={{color: 'red', marginBottom: '1rem'}}>
             <p>{error}</p>
           </div>
-        ) : (
-          <div style={{marginBottom: '1rem'}}>
-            <p className="mb-10">
-              Preview:{' '}
-              <span
-                style={{
-                  color: getStatusColor(status),
-                  border: '1px solid #ccc',
-                  padding: '4px 8px',
-                  borderRadius: '8px',
-                  maxWidth: '600px',
-                }}
-              >
-                {status}
-              </span>{' '}
-              <a
-                href={deployment ? 'https://' + deployment.url : productionURL}
-                target="_blank"
-                rel="noreferrer"
-                style={{color: '#0066cc'}}
-              >
-                Preview URL
-              </a>
-            </p>
-            <p>
-              Last Deployment at:{' '}
-              {deployment ? new Date(deployment.createdAt).toLocaleString() : 'Unknown'}
-            </p>
-          </div>
         )}
 
-        <div style={{marginBottom: '2rem', fontSize: '0.9rem', color: '#666'}}>
+        <div style={{marginBottom: '2rem'}}>
           <p>
-            After checking the preview link, click &lsquo;Publish live&rsquo; to make your changes
-            live:
+            Preview:{' '}
+            <span
+              style={{
+                color: getStatusColor(stagingStatus),
+                border: '1px solid #ccc',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                maxWidth: '600px',
+              }}
+            >
+              {stagingStatus}
+            </span>{' '}
+            <a
+              href={deployments.staging ? 'https://' + deployments.staging.url : stagingURL}
+              target="_blank"
+              rel="noreferrer"
+            >
+              Preview URL
+            </a>
+          </p>
+          <p style={{marginBottom: '2rem'}}>
+            Last Deployment at:{' '}
+            {deployments.staging
+              ? new Date(deployments.staging.createdAt).toLocaleString()
+              : 'Unknown'}
           </p>
           <button
             onClick={() => {
@@ -145,46 +170,62 @@ export default function CustomDeployTool() {
               }
             }}
             style={{
-              padding: '10px 16px',
-              fontSize: '0.9rem',
+              padding: '8px 12px',
+              fontSize: '1.1rem',
               backgroundColor: 'transparent',
               color: '#32a852',
-              border: 'solid 1px white',
+              border: '1px solid #ccc',
               borderRadius: '6px',
               cursor: 'pointer',
+              marginBottom: '1rem',
             }}
           >
             {confirming ? 'Click again to confirm' : 'Publish live'}
           </button>
-          <p>Status to be added</p>
-        </div>
 
-        <div>
-          <h3 style={{fontWeight: 'bold', marginBottom: '0.5rem'}}>🔗 Deployment Links</h3>
-          <ul style={{listStyle: 'none', padding: 0}}>
-            <li style={{margin: '0.5rem 0'}}>
-              🔍{' '}
-              <a
-                href={deployment ? 'https://' + deployment.url : productionURL}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{color: '#0066cc'}}
-              >
-                Preview URL
-              </a>
-            </li>
-            <li style={{margin: '0.5rem 0'}}>
-              🚀{' '}
-              <a
-                href={productionURL}
-                target="_blank"
-                rel="noopener noreferrer"
-                style={{color: '#0066cc'}}
-              >
-                Production URL
-              </a>
-            </li>
-          </ul>
+          <p>{deploying && <span style={{color: 'green'}}>Deploying... Please wait.</span>}</p>
+
+          <p>
+            Production:{' '}
+            <span
+              style={{
+                color: getStatusColor(productionStatus),
+                border: '1px solid #ccc',
+                padding: '4px 8px',
+                borderRadius: '8px',
+                maxWidth: '600px',
+              }}
+            >
+              {productionStatus}
+            </span>{' '}
+            <a href={productionURL} target="_blank" rel="noreferrer">
+              Production URL
+            </a>
+          </p>
+          <p>
+            Last Deployment at:{' '}
+            {deployments.production
+              ? new Date(deployments.production.createdAt).toLocaleString()
+              : 'Unknown'}
+          </p>
+
+          <p>
+            Latest deployment:{' '}
+            {deployments.staging &&
+            deployments.production &&
+            // If production is newer than staging
+            (new Date(deployments.production.createdAt).getTime() >
+              new Date(deployments.staging.createdAt).getTime() ||
+              // If production and staging were published at the same time (within 5 seconds)
+              Math.abs(
+                new Date(deployments.production.createdAt).getTime() -
+                  new Date(deployments.staging.createdAt).getTime(),
+              ) /
+                1000 <=
+                5)
+              ? 'Production'
+              : 'Staging'}
+          </p>
         </div>
       </div>
     </div>

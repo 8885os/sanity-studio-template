@@ -4,7 +4,7 @@ import {visionTool} from '@sanity/vision'
 import {schemaTypes} from './schemaTypes'
 import CustomDeployTool from './components/DeployTool'
 import {defineLocations, presentationTool} from 'sanity/presentation'
-import {StagingAction} from './actions'
+import {createImprovedAction, ProductionAction} from './actions'
 
 export default defineConfig({
   name: 'default',
@@ -38,7 +38,12 @@ export default defineConfig({
     }),
   ],
   document: {
-    actions: [StagingAction],
+    actions: (prev) => [
+      ...prev.map((action) =>
+        action.action === 'publish' ? createImprovedAction(action) : action,
+      ),
+      ProductionAction,
+    ],
   },
 
   schema: {

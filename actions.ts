@@ -1,43 +1,56 @@
 // actions.js
-import {DocumentActionComponent, DocumentActionProps} from 'sanity'
-
-const publishWebhook = async (id: string) => {
+import axios from 'axios'
+import {DocumentActionComponent, DocumentActionProps, useDocumentOperation} from 'sanity'
+import {UploadIcon} from '@sanity/icons'
+import {useEffect, useState} from 'react'
+const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_VERCEL_WEBHOOK
+const handleDeploy = async () => {
   try {
-    const response = await fetch(`${process.env.SANITY_STUDIO_WEBHOOK_URL}`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        id,
-        published: true,
-      }),
-    })
-    if (!response.ok) {
-      throw new Error(`Failed to publish: ${response.statusText}`)
-    }
-    const data = await response.json()
-    console.log('Webhook response:', data)
-    return data
-  } catch (error) {
-    console.error('Error triggering webhook:', error)
-    throw error
+    await axios.post(`${PRODUCTION_WEBHOOK}`)
+  } catch (err) {
+    console.error('Deploy Error:', err)
   }
 }
 
-export const StagingAction: DocumentActionComponent = (props: DocumentActionProps) => {
+export const ProductionAction = (props: DocumentActionProps) => {
+  const {patch, publish} = useDocumentOperation(props.id, props.type)
+  const [isPublishing, setIsPublishing] = useState(false)
+  useEffect(() => {
+    // if the isPublishing state was set to true and the draft has changed
+    // to become `null` the document has been published
+    if (isPublishing && !props.draft) {
+      setIsPublishing(false)
+    }
+  }, [isPublishing, props.draft])
   return {
-    label: 'Publish to Staging',
+    label: 'Publish Live',
     onHandle: async () => {
+      setIsPublishing(true)
+      patch.execute([{set: {publishedAt: new Date().toISOString()}}])
+      publish.execute()
+      props.onComplete()
+
       try {
-        await publishWebhook(props.id)
-        console.log('Published to staging successfully')
-        // Optionally call props.onComplete() to signal completion
-        props.onComplete?.()
+        await handleDeploy()
       } catch (error) {
         console.error('Failed to publish to staging:', error)
         // Optionally show an error in the UI
       }
     },
+    icon: UploadIcon,
+    tone: 'positive',
   }
+}
+
+export function createImprovedAction(originalPublishAction: any) {
+  const StagingAction = (props: DocumentActionProps) => {
+    const originalResult = originalPublishAction(props)
+
+    return {
+      ...originalResult,
+      label: 'Publish to Staging',
+      tone: 'caution',
+    }
+  }
+  return StagingAction
 }
