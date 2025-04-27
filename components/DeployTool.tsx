@@ -7,7 +7,8 @@ const productionURL = 'https://wdc-test-gamma.vercel.app/'
 const stagingURL = 'https://wdc-test-git-staging-8885os-projects.vercel.app/'
 const PROJECT_ID = 'prj_Z1v7HI0owi0iMGrUjdHgTiSen5He'
 const TOKEN = process.env.SANITY_STUDIO_VERCEL_TOKEN
-const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_VERCEL_WEBHOOK
+const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_PRODUCTION_WEBHOOK
+const WEBHOOK_SECRET = process.env.SANITY_STUDIO_WEBHOOK_SECRET_PRODUCTION
 
 interface Deployment {
   id: string
@@ -21,12 +22,13 @@ export default function CustomDeployTool() {
   const [stagingStatus, setStagingStatus] = useState<string>('Loading...')
   const [productionStatus, setproductionStatus] = useState<string>('Loading...')
   const [error, setError] = useState<string | null>(null)
-  const [deploying, setDeploying] = useState(false)
   const [deployments, setDeployments] = useState<{
     staging: Deployment | null
     production: Deployment | null
   }>({staging: null, production: null})
   const [confirming, setConfirming] = useState(false)
+  const [updated, setUpdated] = useState(false)
+  const [updating, setUpdating] = useState(false)
 
   const fetchDeployments = async () => {
     try {
@@ -58,24 +60,23 @@ export default function CustomDeployTool() {
   // Trigger deployment on button click
   const handleDeploy = async () => {
     try {
-      setDeploying(true)
-      await axios.post(`${PRODUCTION_WEBHOOK}`)
+      setUpdating(true)
       setConfirming(false)
+      const response = await axios.post(`${PRODUCTION_WEBHOOK}`, {
+        secret: WEBHOOK_SECRET, // or the secret you want to use
+        isManual: true, // Indicates that this is a manual revalidation request
+      })
+      await new Promise((resolve) => setTimeout(resolve, 5000))
 
-      let retries = 10
-      while (retries > 0) {
-        await new Promise((resolve) => setTimeout(resolve, 10000))
-        await fetchDeployments()
-
-        if (deployments.production?.readyState === 'READY') {
-          break
-        }
-        retries--
+      if (response.status === 200) {
+        setUpdating(false)
+        setUpdated(true)
+        await new Promise((resolve) => setTimeout(resolve, 5000))
+        setUpdated(false)
       }
-      setDeploying(false)
-    } catch (err) {
-      setError('Failed to trigger production deploy.')
-      console.error('Deploy Error:', err)
+    } catch (error) {
+      console.error('Error revalidating:', error)
+      alert('Failed to Update.')
     }
   }
 
@@ -179,7 +180,8 @@ export default function CustomDeployTool() {
             {confirming ? 'Click again to confirm' : 'Publish live'}
           </button>
 
-          <p>{deploying && <span style={{color: 'green'}}>Deploying... Please wait.</span>}</p>
+          <p>{updating && <span style={{color: 'green'}}>Updating...</span>}</p>
+          <p>{updated && <span style={{color: 'green'}}>Updated successfully</span>}</p>
 
           <p>
             Production:{' '}

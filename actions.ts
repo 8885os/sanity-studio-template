@@ -1,14 +1,21 @@
 // actions.js
 import axios from 'axios'
-import {DocumentActionComponent, DocumentActionProps, useDocumentOperation} from 'sanity'
+import {DocumentActionProps, useDocumentOperation} from 'sanity'
 import {UploadIcon} from '@sanity/icons'
 import {useEffect, useState} from 'react'
-const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_VERCEL_WEBHOOK
+const PRODUCTION_WEBHOOK = process.env.SANITY_STUDIO_PRODUCTION_WEBHOOK
+const WEBHOOK_SECRET = process.env.SANITY_STUDIO_WEBHOOK_SECRET_PRODUCTION
+
 const handleDeploy = async () => {
   try {
-    await axios.post(`${PRODUCTION_WEBHOOK}`)
-  } catch (err) {
-    console.error('Deploy Error:', err)
+    await axios.post(`${PRODUCTION_WEBHOOK}`, {
+      secret: WEBHOOK_SECRET, // or the secret you want to use
+      isManual: true, // Indicates that this is a manual revalidation request
+    })
+    await new Promise((resolve) => setTimeout(resolve, 5000))
+  } catch (error) {
+    console.error('Error revalidating:', error)
+    alert('Failed to Update.')
   }
 }
 
